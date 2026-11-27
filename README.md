@@ -4,7 +4,7 @@ after nearly 1.5 years, i finally have the guts to publish this. a revival of th
 
 **Version:** 2.2.0.1 (Updated for FFXIV Patch 7.58 and Dalamud API 15)
 
-Latest release: `https://github.com/eidotheca/ChatBubblesRevived/releases/tag/v2.2.0.0`
+[Latest release](https://github.com/eidotheca/ChatBubblesRevived/releases/latest)
 
 ## Features
 
