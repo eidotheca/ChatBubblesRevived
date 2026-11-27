@@ -3,7 +3,7 @@
     "Author": "Haplo064, Khayle, Eido",
     "Name": "Chat Bubbles Revived",
     "InternalName": "ChatBubblesRevived",
-    "AssemblyVersion": "2.2.0.0",
+    "AssemblyVersion": "2.2.0.1",
     "Description": "a revival of Haplo064 and Khayle's og Chatbubbles plugin, maintained by Eido. its all you could ever want in chat bubbles and more. plus butt bubbles are still here. long live the chatbubbles plugin",
     "Punchline": "god the new ffxiv chat bubbles SUCK we miss you og chatbubbles",
     "ApplicableVersion": "any",
@@ -19,7 +19,7 @@
     ],
     "IsHide": false,
     "IsTestingExclusive": false,
-    "DownloadLinkInstall": "https://github.com/eidotheca/ChatBubblesRevived/releases/download/v2.2.0.0/latest.zip",
-    "DownloadLinkUpdate": "https://github.com/eidotheca/ChatBubblesRevived/releases/download/v2.2.0.0/latest.zip"
+    "DownloadLinkInstall": "https://github.com/eidotheca/ChatBubblesRevived/releases/download/v2.2.0.1/latest.zip",
+    "DownloadLinkUpdate": "https://github.com/eidotheca/ChatBubblesRevived/releases/download/v2.2.0.1/latest.zip"
   }
 ]
