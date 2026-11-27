@@ -1,0 +1,19 @@
+{
+  "Author": "Haplo064, Khayle, Eido",
+  "Name": "Chat Bubbles Revived",
+  "Punchline": "god the new ffxiv chat bubbles SUCK we miss you og chatbubbles",
+  "Description": "a revival of Haplo064 and Khayle's og Chatbubbles plugin, maintained by Eido. its all you could ever want in chat bubbles and more. plus butt bubbles are still here. long live the chatbubbles plugin",
+  "InternalName": "ChatBubblesRevived",
+  "ApplicableVersion": "any",
+  "DalamudApiLevel": 15,
+  "RepoUrl": "https://github.com/eidotheca/ChatBubblesRevived",
+  "IconUrl": "https://raw.githubusercontent.com/eidotheca/ChatBubblesRevived/main/ChatBubbles/images/icon.png",
+  "Tags": [
+    "UI",
+    "Roleplay",
+    "RP",
+    "Bubbles",
+    "Chat"
+  ],
+  "AssemblyVersion": "2.2.0.0"
+}
