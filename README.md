@@ -1,6 +1,6 @@
 # Chat Bubbles Revived
 
-after nearly 1.5 years, i finally have the guts to publish this. a revival of the old [ChatBubbles](https://github.com/Haplo064/ChatBubbles) for FFXIV made by Haplo064 and Khayle. this plugin is pretty much the same thing except now I'll be the one maintaining it. 
+after nearly 1.5 years, i finally have the guts to publish this. a revival of the old [ChatBubbles](https://github.com/Haplo064/ChatBubbles) for FFXIV made by Haplo064 and Khayle. this plugin is pretty much the same thing except now I'll be the one maintaining it. a customizable native chat bubble plugin for ffxiv that has channel colors, scaling, and 4 message modes.
 
 **Version:** 2.2.0.1 (Updated for FFXIV Patch 7.58 and Dalamud API 15)
 
@@ -13,6 +13,7 @@ some are still buggy but they work for now.
 - native chat bubbles (like you see with the npcs? yeah) with adjustable size, height and duration
 - custom text and background colors for each chat channel.
 - chat channel selection and social filters
+- works in dungeons and pvp
 - four message modes: Queue, Stack, Replace, Sensible
 - chaos mode and butt bubbles
 
@@ -25,7 +26,6 @@ ya girl loves organization so settings are now split into General, Channels and 
 
 ## Known limitations
 
-- pvp enabled but not fully tested yet.
 - chat bubbles may not appear if the plugin can't uniquely identify the character speaking.
 - FFXIV/Dalamud updates may break bubbles since this plugin relies on the game's native UI.
 - bubbles may jitter horizontally during certain character and camera movements. currently investigating.
