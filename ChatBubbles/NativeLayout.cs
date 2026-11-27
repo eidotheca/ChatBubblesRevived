@@ -6,6 +6,7 @@ using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
 using Dalamud.Game.ClientState.Objects.SubKinds;
+using Dalamud.Game.ClientState.Objects.Types;
 using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using MiniTalk = FFXIVClientStructs.FFXIV.Client.UI.AddonMiniTalk;
@@ -63,9 +64,43 @@ namespace ChatBubbles
             }
             return result;
         }
+        // A native slot may stay visible across a new request for the same text.
+        // Recover only a unique exact match after the requested actor balloon is active.
+        private bool CanRecoverExcludedNode(NativeTrack track, Character* character,
+            AtkTextNode* text, nint addon)
+        {
+            // An arbitrary delay exposes the default style even when ownership
+            // can already be validated in this draw pass.
+            if (track.Active == null || track.Closing ||
+                character->YellBalloon.State != FFXIVClientStructs.FFXIV.Client.Game.NpcYellBalloonState.Active)
+                return false;
+            string expected = NormalizeSpacing(track.Active.Text);
+            if (expected.Length == 0 ||
+                !string.Equals(NormalizeSpacing(character->YellBalloon.Text.ToString()), expected, StringComparison.Ordinal) ||
+                !string.Equals(NormalizeSpacing(NativeNodePlain(text)), expected, StringComparison.Ordinal))
+                return false;
+            foreach (var other in _nativeTracks.Values)
+                if (!ReferenceEquals(other, track) && other.Active != null &&
+                    other.LastLayoutAddon == addon && other.LastLayoutNode == (nint)text)
+                    return false;
+            // NPCs and other players can also own native yell balloons. Do not
+            // reclaim a preexisting slot if another actor has matching dialogue.
+            foreach (var actor in Services.ObjectTable.OfType<ICharacter>())
+            {
+                if (actor.Address == nint.Zero || actor.Address == (nint)character) continue;
+                var other = (Character*)actor.Address;
+                if (other->YellBalloon.Character != other ||
+                    other->YellBalloon.State == FFXIVClientStructs.FFXIV.Client.Game.NpcYellBalloonState.Inactive)
+                    continue;
+                if (MatchesLayoutText(other->YellBalloon.Text.ToString(), track.Active.Text)) return false;
+            }
+            return true;
+        }
         private void ApplyActiveNativeSpacing(NativeTrack track, Character* character, long now)
         {
-            if (track.Active == null || track.Closing) return;
+            // The game owns the movement/anchor update. Only alter visual geometry
+            // in the draw pass, after the native position has been calculated.
+            if (!_nativeColorDrawPass || track.Active == null || track.Closing) return;
             if (_nativeColorDrawPass) _nativeColorStatus = $"Waiting for layout: {track.Active.Channel}";
             if (!MatchesLayoutText(character->YellBalloon.Text.ToString(), track.Active.Text))
             { RecordLayoutWait(track, now, $"Actor text mismatch (expected {track.Active.Text.Length}, actual {character->YellBalloon.Text.ToString().Length} chars)"); return; }
@@ -81,6 +116,7 @@ namespace ChatBubbles
             AtkResNode* scaleRoot = null;
             AtkResNode* background = null;
             AtkResNode* tail = null;
+            bool excluded = false;
             foreach (var entry in addon->TalkBubbles)
             {
                 var text = entry.BubbleTextNode;
@@ -89,7 +125,7 @@ namespace ChatBubbles
                 if (!root->IsVisible() || !text->IsVisible() || !MatchesLayoutText(NativeNodePlain(text), track.Active.Text))
                 { track.PreexistingNodes.Remove((nint)text); continue; }
                 matches++;
-                if (track.PreexistingNodes.Contains((nint)text)) continue;
+                excluded = track.PreexistingNodes.Contains((nint)text);
                 target = text;
                 scaleRoot = root;
                 background = (AtkResNode*)entry.BubbleNineGridNode;
@@ -97,29 +133,39 @@ namespace ChatBubbles
             }
             if (matches != 1 || target == null)
             { RecordLayoutWait(track, now, $"Matching nodes={matches}; eligible={target != null}; excluded={track.PreexistingNodes.Count}; expected chars={track.Active.Text.Length}"); return; }
-            RestoreScaleForLayout(scaleRoot, target, background, tail, address);
-            if (_nativeColorDrawPass)
+            // A matched slot can be visible before its first text measurement is ready.
+            // Validate the child hierarchy independently of the compact layout result.
+            if (background == null || tail == null || target->NodeId != 3 ||
+                background->NodeId != 5 || tail->NodeId != 4 ||
+                ((AtkResNode*)target)->ParentNode != scaleRoot || background->ParentNode != scaleRoot ||
+                tail->ParentNode != scaleRoot)
+            { RecordLayoutWait(track, now, "Native children not ready or unsupported hierarchy"); return; }
+            if (excluded)
             {
-                ApplyNativeEmoteStyle(target, track.Active);
-                EnsureMixedNativeText(target, track.Active);
+                if (!CanRecoverExcludedNode(track, character, target, address))
+                { RecordLayoutWait(track, now, $"Matching nodes=1; eligible=False; excluded={track.PreexistingNodes.Count}; recovery waiting"); return; }
+                track.PreexistingNodes.Remove((nint)target);
+                if (_debug) Services.PluginLog.Debug("Chat Bubbles: Recovered unique preexisting native bubble match.");
             }
+            RestoreScaleForLayout(scaleRoot, target, background, tail, address);
+            ApplyNativeEmoteStyle(target, track.Active);
+            EnsureMixedNativeText(target, track.Active);
             var result = ApplyCompactLayout(target, background, tail, track.GrownInPlace);
             track.LayoutDone = !result.StartsWith("Unexpected", StringComparison.Ordinal);
+            // Color and size do not require a successful text measurement. Retry
+            // compact spacing on every draw while the same message is visible.
+            ApplyNativeScale(scaleRoot, target, background, tail, address);
+            try { ApplyNativeColors(target, background, tail, track.Active.Channel); }
+            catch (Exception e) { _nativeColorStatus = "Color failed: " + e.GetType().Name; }
             if (track.LayoutDone)
             {
-                ApplyNativeScale(scaleRoot, target, background, tail, address);
                 track.LastLayoutNode = (nint)target;
                 track.LastLayoutAddon = address;
                 track.LastLayoutAt = now;
                 _recentNativeNodes[track.Active.Id] = (address, (nint)target, now);
-                if (_nativeColorDrawPass)
-                {
-                    try { ApplyNativeColors(target, background, tail, track.Active.Channel); }
-                    catch (Exception e) { _nativeColorStatus = "Color failed: " + e.GetType().Name; }
-                }
             }
             if (track.LayoutDone) _nativeLayoutStatus = $"Applied ({track.Active.Channel}): {background->Width}x{background->Height}; text {target->Width}x{target->Height}; text Y={((AtkResNode*)target)->Y:F1}; background Y={background->Y:F1}; tall trim={(!track.GrownInPlace && target->Height >= 120 ? 23 : 0)}";
-            else _nativeLayoutStatus = result;
+            else RecordLayoutWait(track, now, result);
         }
         // Measure candidate text without writing it into the visible node.
         private static void MeasureCandidate(AtkTextNode* node, string value, ushort* width, ushort* height)
@@ -359,6 +405,8 @@ namespace ChatBubbles
                     {
                         if (track.Active == null) continue;
                         var item = track.Active;
+                        if (track.PreexistingNodes.Count > 0)
+                            track.PreexistingNodes.IntersectWith(ExistingMatchingNodes(item.Text));
                         var actor = Services.ObjectTable.OfType<IPlayerCharacter>().FirstOrDefault(p => p.EntityId == item.Id && p.Name.TextValue == item.Name);
                         if (actor == null || actor.Address == nint.Zero) continue;
                         var character = (Character*)actor.Address;

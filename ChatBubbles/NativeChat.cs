@@ -155,7 +155,6 @@ namespace ChatBubbles
                                 MatchesNativeText(character->YellBalloon.Text.ToString(), track.Active.Text))
                                 character->YellBalloon.PlayTimer = Math.Max(character->YellBalloon.PlayTimer, 0.75f);
                             _nativeCaptureStatus = $"Stack update pending ({now - track.Replacement.Time}ms); retaining existing balloon. Reason: {_stackWaitReason}";
-                            ApplyActiveNativeSpacing(track, character, now);
                             continue;
                         }
                         // Only close a balloon whose text matches our own last request. Never close an unrelated game balloon.
@@ -168,8 +167,7 @@ namespace ChatBubbles
                             track.ClosedAt = now;
                             _nativeCaptureStatus = "Replacing native balloon; waiting for idle.";
                         }
-                        // Native layout is also reapplied before drawing.
-                        if (!track.Closing) ApplyActiveNativeSpacing(track, character, now);
+                        // Visual layout is applied only by NativeLayoutPreDraw.
                         continue;
                     }
                     // Inactive is not proof that the old UI slot has finished fading out.
